@@ -80,23 +80,26 @@ def extract_and_validate(data: dict, source_file: str) -> CarListing | None:
 
 
 if __name__ == "__main__":
+    print(os.listdir(RAW_DIR))
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    cars = load_car_blocks("data/raw/honda.html")
-
     listings = []
-    for block in cars:
-        flat = flatten_car(block)
-        validated = extract_and_validate(flat, "honda.html")
-        if validated:
-            listings.append(validated)
 
-    rows = [item.model_dump() for item in listings]
+    for filename in os.listdir(RAW_DIR):
+        path = os.path.join(RAW_DIR, filename)
+        cars = load_car_blocks(path)
 
-    with open(OUTPUT_FILE, "w", encoding="UTF-8") as f:
+        for block in cars:
+                flat = flatten_car(block)
+                validated = extract_and_validate(flat, filename)
+                if validated:
+                    listings.append(validated)
+
+
+
+    rows = [item.model_dump() for item in listings] 
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
 
     print(f"saved {len(rows)} rows to {OUTPUT_FILE}")
-
-    # print(extract_and_validate(flat, "honda.html"))
