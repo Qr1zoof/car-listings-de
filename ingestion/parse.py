@@ -7,6 +7,7 @@ from pydantic import BaseModel, ValidationError
 RAW_DIR = "data/raw"
 OUTPUT_DIR = "data/cleaned"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "all_cars.json")
+MANIFEST_FILE = "data/manifest.json"
 
 
 class CarListing(BaseModel):
@@ -19,6 +20,7 @@ class CarListing(BaseModel):
     region_slug: str | None = None
     url: str | None = None
     source_file: str
+    scraped_at: str
 
 
 def load_car_blocks(path: str) -> list[dict]:
@@ -61,7 +63,7 @@ def flatten_car(block: dict) -> dict:
     }
 
 
-def extract_and_validate(data: dict, source_file: str) -> CarListing | None:
+def extract_and_validate(data: dict, source_file: str, scraped_at: str) -> CarListing | None:
     try:
         return CarListing(
             listing_id=data.get("listing_id"),
@@ -73,6 +75,7 @@ def extract_and_validate(data: dict, source_file: str) -> CarListing | None:
             region_slug=data.get("region_slug"),
             url=data.get("url"),
             source_file=source_file,
+            scraped_at=scraped_at,
         )
     except ValidationError as e:
         print(f"Validation error in {source_file}: {e}")
@@ -80,6 +83,10 @@ def extract_and_validate(data: dict, source_file: str) -> CarListing | None:
 
 
 if __name__ == "__main__":
+
+    with open(MANIFEST_FILE, encoding="utf-8") as f:
+        manifest = json.load(f)
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     listings = []
 
@@ -89,7 +96,7 @@ if __name__ == "__main__":
 
         for block in cars:
             flat = flatten_car(block)
-            validated = extract_and_validate(flat, filename)
+            validated = extract_and_validate(flat, filename, manifest[filename])
             if validated:
                 listings.append(validated)
 
