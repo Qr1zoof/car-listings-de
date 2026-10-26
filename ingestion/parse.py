@@ -1,8 +1,8 @@
 import json
 import os
+
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, ValidationError
-
 
 RAW_DIR = "data/raw"
 OUTPUT_DIR = "data/cleaned"
@@ -80,24 +80,29 @@ def extract_and_validate(data: dict, source_file: str) -> CarListing | None:
 
 
 if __name__ == "__main__":
-    print(os.listdir(RAW_DIR))
-
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     listings = []
 
-    for filename in os.listdir(RAW_DIR):
+    for filename in sorted(os.listdir(RAW_DIR)):
         path = os.path.join(RAW_DIR, filename)
         cars = load_car_blocks(path)
 
         for block in cars:
-                flat = flatten_car(block)
-                validated = extract_and_validate(flat, filename)
-                if validated:
-                    listings.append(validated)
+            flat = flatten_car(block)
+            validated = extract_and_validate(flat, filename)
+            if validated:
+                listings.append(validated)
 
+    seen = set()
+    unique_listings = []
+    for item in listings:
+        if item.listing_id not in seen:
+            seen.add(item.listing_id)
+            unique_listings.append(item)
 
+    print(f"parsed: {len(listings)}, after dedup: {len(unique_listings)}")
 
-    rows = [item.model_dump() for item in listings] 
+    rows = [item.model_dump() for item in unique_listings]
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
